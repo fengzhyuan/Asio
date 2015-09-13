@@ -5,37 +5,38 @@
  * Created on September 11, 2015, 6:25 PM
  */
 
-#ifndef CHATCLIENT_H
-#define	CHATCLIENT_H
+#ifndef ASIO_ASYNC_METHOD_INCLUDE_CLIENT_H_
+#define ASIO_ASYNC_METHOD_INCLUDE_CLIENT_H_
 
 #include "utils.h"
 #include "Message.h"
 
 class Client{
-public:
-public:
-    Client( io_service& _service, tcp::resolver::iterator it);
-    bool isConnected( ) const;
-    void write( const Message& _msg);
+ public:
+    Client(io_service& _service, tcp::resolver::iterator _it);
+    bool isConnected() const;
+    void write(const Message& _msg);
     void close();
-    
-private:
-    void hConnect( const system::error_code& err);
-    void hParseHeader( const system::error_code &err);
-    void hParseBody( const system::error_code &err);
-    void doWrite( Message msg);
-    void hWrite( const system::error_code &err);
+    const string getName() const;
+ private:
+    void hConnect(const system::error_code&);
+    void hRead(const system::error_code&);
+    void hParseHeader(const system::error_code&);
+    void hParseBody(const system::error_code&);
+    void doWrite(Message msg);
+    void hWrite(const system::error_code&);
     void doClose();
     void displayMsg();
-private:
+ private:
     boost::asio::io_service&    m_service; /**< single service instance ? */
-    tcp::socket                 m_socket;   
+    tcp::socket                 m_socket;
     Message                     m_msg_in;   /**< read message */
     dqMsg                       m_msgs;     /**< stored messages */
     bool                        m_status;  /**< cstr indicator */
+    string                      m_uid; 
 };
 
 bool initClientContext(int, char**);
 
-#endif	/* CHATCLIENT_H */
+#endif  /* ASIO_ASYNC_METHOD_INCLUDE_CLIENT_H_ */
 

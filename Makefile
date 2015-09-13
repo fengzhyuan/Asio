@@ -8,7 +8,7 @@ TARGET_ALL = chatsystem
 
 $(TARGET_ALL):	
 	$(CXX) $(SOURCE_ALL)*.cpp  $(CXXFLAGS) $(CXXLIBS) -o  $(TARGET_ALL)
-	cp $(TARGET_ALL) dist/Debug/GNU-Linux-x86/ 
+	cp $(TARGET_ALL) dist/Debug/GNU-Linux-x86/boostasio 
 
 all:	$(TARGET_ALL)
 

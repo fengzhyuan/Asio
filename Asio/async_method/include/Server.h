@@ -15,9 +15,9 @@
  * \class BaseMember
  * base class of members in chat room
  */
-class BaseMember {
+class BaseSession {
 public:
-    virtual ~BaseMember() {}
+    virtual ~BaseSession() {}
     virtual void deliver(const Message& msg) = 0;
 };
 
@@ -27,44 +27,43 @@ public:
  */
 class Room {
 public:
-    typedef boost::shared_ptr<BaseMember> typeMember;
-    
+    typedef boost::shared_ptr<BaseSession> typeBSession;
 public:
-    void join( typeMember _member);
-    void leave( typeMember _member);
-
-    void deliver(const Message& _msg);
+    void join(typeBSession);        /* join a new session */
+    void leave(typeBSession);       /* remove a session */
+    void deliver(const Message&);   /* deliver message to members */
+    void blackboard( const Message&);
 
 private:
     enum { MAX_MSG_RECORD = 100 };
 
 private:
-    set<typeMember> m_member_list;
+    set<typeBSession> m_member_list;
     dqMsg      m_msgs; /**< most recent messages in the room */
 };
 
 
 /*!
  * \class Session
- * session management class
+ * server side session manager; each session corresponds to a client
  */
 
 class Session
-  : public BaseMember,
+  : public BaseSession,
     public boost::enable_shared_from_this<Session> {
     
-public:
-    Session(boost::asio::io_service& _service, Room& _room);
+ public:
+    Session(boost::asio::io_service&, Room&);
 
-    tcp::socket& socket();
+    tcp::socket& getSocket();
     void start();
-    void deliver(const Message& _msg);
-    void hParseHeader(const boost::system::error_code& _error);
-    void hParseBody(const boost::system::error_code& _error);
-    void hWrite(const boost::system::error_code& _error);
+    void deliver(const Message&);
+    void hParseHeader(const boost::system::error_code&);
+    void hParseBody(const boost::system::error_code&);
+    void hWrite(const boost::system::error_code&);
     
-private:
-    tcp::socket m_socket;
+ private:
+    tcp::socket m_socket;   
     Room        &m_room;
     Message     m_msg_in;
     dqMsg       m_msgs;
@@ -72,12 +71,11 @@ private:
 
 class Server {
 public:
-    typedef boost::shared_ptr<Session> typeSession;  
-    
+    typedef boost::shared_ptr<Session> typeSession;
 public:
-    Server(boost::asio::io_service& _service, const tcp::endpoint& _endpoint);
+    Server(boost::asio::io_service&, const tcp::endpoint&);
     void start();
-    void hStart(typeSession _session, const boost::system::error_code& _error);
+    void hStart(typeSession, const boost::system::error_code&);
 
 private:
   boost::asio::io_service& m_service;
@@ -88,7 +86,7 @@ private:
 typedef boost::shared_ptr<Server> typeServer;
 typedef list<typeServer> typeServerList;
 
-bool initServerContext( int argc, char**argv);
+bool initServerContext(int argc, char**argv);
 
 #endif	/* CHATSERVER_H */
 

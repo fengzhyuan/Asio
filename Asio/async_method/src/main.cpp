@@ -15,18 +15,18 @@ using namespace std;
 int main(int argc, char** argv) {
     setvbuf(stdout, 0, _IONBF, 0);
     
-    if( argc < 2){
+    if (argc < 2){
         cout << "too few params\n";
         return -1;
     }
-    string type = string( argv[1]);
+    string mType = string(argv[1]);
     
-    if( type == "client") {
-        if( !initClientContext( argc, argv))
+    if (mType == "client") {
+        if (!initClientContext(argc, argv))
             return -1;
     }
-    else if( type == "server") {
-        if( !initServerContext( argc, argv))
+    else if (mType == "server") {
+        if (!initServerContext(argc, argv))
             return -1;
     }
     

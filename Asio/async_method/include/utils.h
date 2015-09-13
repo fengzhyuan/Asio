@@ -29,17 +29,6 @@ using namespace boost::asio;
 using namespace boost::asio::ip;
 using boost::asio::ip::tcp;
 
-///* client side */
-//typedef boost::shared_ptr<tcp::socket> socket_ptr;
-//typedef boost::shared_ptr<string> string_ptr;
-//typedef boost::shared_ptr< queue<string_ptr> > msgQueueClient_ptr;
-//
-///* server side */
-//typedef map<socket_ptr, string_ptr> clientMap;
-//typedef boost::shared_ptr<clientMap> clientMap_ptr;
-//typedef boost::shared_ptr< list<socket_ptr> > clientList_ptr;
-//typedef boost::shared_ptr< queue<clientMap_ptr> > msgQueueServer_ptr;
-
 
 #endif	/* UTILS_H */
 
