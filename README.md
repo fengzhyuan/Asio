@@ -1,6 +1,8 @@
 Learning multithreading programming (Boost) - demo 
 
 based on available online resource
+
+
 =========
 async_method/ 
 ------
