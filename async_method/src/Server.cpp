@@ -24,6 +24,8 @@ void Room::deliver(const Message& _msg) {
         boost::bind( &BaseMember::deliver, _1, boost::ref( _msg)));
 }
 
+//------------------------------------------------------------------------------
+
 Session::Session(boost::asio::io_service& _service, Room& _room)
       : m_socket( _service),
         m_room( _room)  {}
@@ -97,11 +99,9 @@ void Session::hWrite(const boost::system::error_code& _error) {
     }
 }
 
-/***
- * 
- * \class Server
- * 
- */
+//------------------------------------------------------------------------------
+
+
 Server::Server(boost::asio::io_service& _service, 
         const tcp::endpoint& _endpoint)
         : m_service( _service),

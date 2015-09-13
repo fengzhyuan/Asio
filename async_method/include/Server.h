@@ -21,6 +21,10 @@ public:
     virtual void deliver(const Message& msg) = 0;
 };
 
+/*!
+ * \class Room
+ * chat room class
+ */
 class Room {
 public:
     typedef boost::shared_ptr<BaseMember> typeMember;
@@ -39,7 +43,11 @@ private:
     dqMsg      m_msgs; /**< most recent messages in the room */
 };
 
-//----------------------------------------------------------------------
+
+/*!
+ * \class Session
+ * session management class
+ */
 
 class Session
   : public BaseMember,
