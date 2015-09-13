@@ -26,6 +26,7 @@ using namespace std;
 using namespace boost;
 using namespace boost::asio;
 using namespace boost::asio::ip;
+using boost::asio::ip::tcp;
 
 ///* client side */
 //typedef boost::shared_ptr<tcp::socket> socket_ptr;

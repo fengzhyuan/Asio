@@ -1,6 +1,6 @@
 
 CXX=g++
-CXXFLAGS = -g -I./async_method/include -I/usr/include -I/usr/local/include -w
+CXXFLAGS = -g -I./async_method/include -I/usr/include -I/usr/local/include -w -std=c++11
 CXXLIBS  = -L/usr/lib -L/usr/local/lib -lboost_thread -lboost_system -lpthread
 
 SOURCE_ALL = async_method/src/

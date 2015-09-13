@@ -8,11 +8,13 @@
 #include "Client.h"
 #include "Server.h"
 
+using namespace std;
 /*
  * 
  */
 int main(int argc, char** argv) {
     setvbuf(stdout, 0, _IONBF, 0);
+    
     if( argc < 2){
         cout << "too few params\n";
         return -1;

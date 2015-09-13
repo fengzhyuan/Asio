@@ -11,65 +11,74 @@
 #include "utils.h"
 #include "Message.h"
 
-using boost::asio::ip::tcp;
-
-class Participant{
+/*!
+ * \class BaseMember
+ * base class of members in chat room
+ */
+class BaseMember {
 public:
-    virtual ~Participant() {}
-    virtual void deliver( const Message& msg) = 0;
+    virtual ~BaseMember() {}
+    virtual void deliver(const Message& msg) = 0;
 };
 
 class Room {
 public:
-    typedef boost::shared_ptr<Participant> ptrParticipant;
+    typedef boost::shared_ptr<BaseMember> typeMember;
+    
 public:
-    void join( ptrParticipant member);
-    void leave( ptrParticipant member);
-    void deliver( const Message& msg);
+    void join( typeMember _member);
+    void leave( typeMember _member);
+
+    void deliver(const Message& _msg);
+
 private:
-    set<ptrParticipant> m_members;
-    enum {MAX_RECORD_MSG = 128};
-    dqMsg m_msg_record;
+    enum { MAX_MSG_RECORD = 100 };
+
+private:
+    set<typeMember> m_member_list;
+    dqMsg      m_msgs; /**< most recent messages in the room */
 };
 
-/**
- * enable returning shared_ptr to itself
- */
-class Session:
-    public Participant, 
+//----------------------------------------------------------------------
+
+class Session
+  : public BaseMember,
     public boost::enable_shared_from_this<Session> {
     
 public:
-    Session( asio::io_service& _service, Room& _room);
-    tcp::socket& getSocket();
+    Session(boost::asio::io_service& _service, Room& _room);
+
+    tcp::socket& socket();
     void start();
-    void deliver( const Message& msg);
-    void hParseHeader( const system::error_code& e);
-    void hParseBody( const system::error_code& e);
-    void hWrite( const system::error_code& e);
+    void deliver(const Message& _msg);
+    void hParseHeader(const boost::system::error_code& _error);
+    void hParseBody(const boost::system::error_code& _error);
+    void hWrite(const boost::system::error_code& _error);
     
 private:
     tcp::socket m_socket;
-    Room&   m_room;
-    Message m_msg_in;
-    dqMsg   m_msgs;
+    Room        &m_room;
+    Message     m_msg_in;
+    dqMsg       m_msgs;
 };
-typedef boost::shared_ptr<Session> ptrSession;
 
-class Server{
+class Server {
 public:
-    Server( io_service& _service, const tcp::endpoint& ep);
-    void start();
-    void hStart(ptrSession session, const system::error_code& e);
+    typedef boost::shared_ptr<Session> typeSession;  
     
+public:
+    Server(boost::asio::io_service& _service, const tcp::endpoint& _endpoint);
+    void start();
+    void hStart(typeSession _session, const boost::system::error_code& _error);
+
 private:
-    io_service&     m_service;
-    tcp::acceptor   m_acceptor;
-    Room            m_room;
+  boost::asio::io_service& m_service;
+  tcp::acceptor m_acceptor;
+  Room m_room;
 };
 
-typedef boost::shared_ptr<Server> ptrServer;
-typedef std::list<ptrServer> lstServer;
+typedef boost::shared_ptr<Server> typeServer;
+typedef list<typeServer> typeServerList;
 
 bool initServerContext( int argc, char**argv);
 
