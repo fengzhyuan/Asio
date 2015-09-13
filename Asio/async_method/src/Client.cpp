@@ -144,6 +144,7 @@ bool initClientContext(int argc, char**argv) {
 
         tcp::resolver m_Resolver( m_Service);
         tcp::resolver::query m_Query( argv[2], argv[3]);
+        // domain name: 1-to-many
         tcp::resolver::iterator m_Iterator = m_Resolver.resolve( m_Query);
 
         boost::shared_ptr<Client> m_pClient( new Client( m_Service, m_Iterator));
