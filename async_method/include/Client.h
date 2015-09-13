@@ -1,5 +1,5 @@
 /* 
- * File:   chatchat_client.h
+ * File:   Client.h
  * Author: fengzh
  *
  * Created on September 11, 2015, 6:25 PM
