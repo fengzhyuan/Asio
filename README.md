@@ -1,4 +1,4 @@
-Learning multithreading programming (Boost) - demo 
+Learning network multithreading programming (Boost) - demo 
 
 docs:
 http://mmoaay.gitbooks.io/boost-asio-cpp-network-programming-chinese/
