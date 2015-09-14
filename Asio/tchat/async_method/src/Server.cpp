@@ -46,6 +46,7 @@ tcp::socket& Session::getSocket() {
 
 void Session::start() {
     m_room.join(shared_from_this());
+
     boost::asio::async_read(m_socket,
         boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
         boost::bind(&Session::hParseHeader, shared_from_this(),
@@ -66,21 +67,27 @@ void Session::deliver(const Message& msg) {
 }
 
 void Session::hParseHeader(const boost::system::error_code& error) {
-    
     if  (!error && m_msg_in.decodeHeader()) {
-      boost::asio::async_read(m_socket,
+        boost::asio::async_read(m_socket,
             boost::asio::buffer(m_msg_in.body(), m_msg_in.bodyLength()),
             boost::bind(&Session::hParseBody, shared_from_this(),
               boost::asio::placeholders::error));
     }
     else {
-      m_room.leave(shared_from_this());
+        m_room.leave(shared_from_this());
     }
 }
 
 void Session::hParseBody(const boost::system::error_code& error) {
     if (!error) {
-        m_room.deliver(m_msg_in);
+        if (!m_msg_in.isSysMsg()) {
+            m_room.deliver(m_msg_in);
+        }
+        else {
+            char body[Message::MAX_BODY_LENGTH+1];
+            memcpy(body, m_msg_in.body(), m_msg_in.bodyLength());
+            this->setUid(body);            
+        }
         // prepare for the next session
         boost::asio::async_read(m_socket,
             boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
@@ -92,8 +99,8 @@ void Session::hParseBody(const boost::system::error_code& error) {
     }
 }
 
-void Session::hWrite(const boost::system::error_code& _error) {
-    if (!_error) {
+void Session::hWrite(const boost::system::error_code& error) {
+    if (!error) {
         m_msgs.pop_front();
         if (!m_msgs.empty()) {
         boost::asio::async_write(m_socket,

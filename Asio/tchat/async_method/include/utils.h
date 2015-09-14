@@ -22,6 +22,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time.hpp>
+#include <boost/lambda/bind.hpp>
 
 using namespace std;
 using namespace boost;

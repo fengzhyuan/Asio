@@ -44,17 +44,15 @@ void Client::close() {
 void Client::hConnect(const system::error_code& err) {
     if (!err) {
         cout << "connected to server " << endl;
-//        // push basic info to server
-//        Message msg;
-//        string info = m_uid;
-//        msg.bodyLength(info.length());
-//        strcpy(msg.body(), info.c_str());
+        // push basic info to server
+        Message mClientInfo(true);
+        string info = m_uid;
+        mClientInfo.bodyLength(info.length());
+        strcpy(mClientInfo.body(), info.c_str());
         
-//        boost::asio::async_write(m_socket,
-//            boost::asio::buffer(msg.data(), msg.length()),
-//            boost::bind(&Client::hRead, this,
-//                boost::asio::placeholders::error));
-        hRead( err);
+        this->write( mClientInfo );
+        
+        hRead(err);
     }   
 }
 
@@ -174,7 +172,7 @@ bool initClientContext(int argc, char**argv) {
         while (cin.getline(input, Message::MAX_BODY_LENGTH + 1)) {
             if (!strcmp(input, "EXIT") ) {
                 break;
-            }
+            } 
             else if (!strlen(input)) {
                 continue;
             }

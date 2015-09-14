@@ -19,6 +19,14 @@ class BaseSession {
 public:
     virtual ~BaseSession() {}
     virtual void deliver(const Message& msg) = 0;
+    const string getUid() const{ 
+        return m_uid;
+    }
+protected:
+    void setUid( const char* name) { m_uid = string(name); }
+    
+protected:
+    string m_uid;
 };
 
 /*!
@@ -29,7 +37,7 @@ class Room {
 public:
     typedef boost::shared_ptr<BaseSession> typeBSession;
 public:
-    void join(typeBSession);        /* join a new session */
+    void join(typeBSession);/* join a new session */
     void leave(typeBSession);       /* remove a session */
     void deliver(const Message&);   /* deliver message to members */
     void blackboard( const Message&);
