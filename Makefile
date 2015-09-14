@@ -1,9 +1,9 @@
 
 CXX=g++
-CXXFLAGS = -g -I./Asio/async_method/include -I/usr/include -I/usr/local/include -w -std=c++11
+CXXFLAGS = -g -I./Asio/tchat/async_method/include -I/usr/include -I/usr/local/include -w -std=c++11
 CXXLIBS  = -L/usr/lib -L/usr/local/lib -lboost_thread -lboost_system -lpthread
 
-SOURCE_ALL = Asio/async_method/src/
+SOURCE_ALL = Asio/tchat/async_method/src/
 TARGET_ALL = chatsystem
 
 $(TARGET_ALL):	
