@@ -6,14 +6,20 @@
 
 void Room::join(typeBSession session) {
     m_member_list.insert(session);
+
     // send message history in this room to the new session
     std::for_each(m_msgs.begin(), m_msgs.end(),
         boost::bind(&BaseSession::deliver, session, _1));
+    
     // notification on new member
+    string str = "[ " + session->getUid() + " ] entered";
+    blackboard(str, Message::MSG_ENTER);
 }
 
 void Room::leave(typeBSession session) {
     m_member_list.erase(session);
+    string str = "[ " + session->getUid() + " ] leaved";
+    blackboard(str, Message::MSG_LEAVE);
 }
 
 /**
@@ -29,9 +35,10 @@ void Room::deliver(const Message& msg) {
         boost::bind(&BaseSession::deliver, _1, boost::ref(msg))); /* ref to session::m_msg_in */
 }
 
-void Room::blackboard(const Message& msg) {
-    for_each(m_member_list.begin(), m_member_list.end(),
-        boost::bind(&BaseSession::deliver, _1, boost::ref(msg))); /* ref to session::m_msg_in */
+void Room::blackboard(const string& str, Message::MSG_TYPE msgType) {
+    Message msg(msgType);
+    msg.buildMsg(str);
+    this->deliver(msg);
 }
 
 //------------------------------------------------------------------------------
@@ -45,7 +52,6 @@ tcp::socket& Session::getSocket() {
 }
 
 void Session::start() {
-    m_room.join(shared_from_this());
 
     boost::asio::async_read(m_socket,
         boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
@@ -56,7 +62,7 @@ void Session::start() {
 void Session::deliver(const Message& msg) {
     bool bEmpty = m_msgs.empty();
     m_msgs.push_back(msg);
-    
+
     if (bEmpty) {
         // send the message to client
         boost::asio::async_write(m_socket,
@@ -84,9 +90,10 @@ void Session::hParseBody(const boost::system::error_code& error) {
             m_room.deliver(m_msg_in);
         }
         else {
-            char body[Message::MAX_BODY_LENGTH+1];
+            char body[Message::MAX_BODY_LENGTH+1]="";
             memcpy(body, m_msg_in.body(), m_msg_in.bodyLength());
-            this->setUid(body);            
+            this->setUid(body);  
+            m_room.join(shared_from_this());
         }
         // prepare for the next session
         boost::asio::async_read(m_socket,
@@ -119,8 +126,10 @@ void Session::hWrite(const boost::system::error_code& error) {
 
 Server::Server(boost::asio::io_service& service, 
         const tcp::endpoint& endpoint)
-        : m_service(service),
+        : m_session_count(0),
+          m_service(service),
           m_acceptor(service, endpoint){
+    cout << "server established\n";
     start(); 
 }
 
@@ -135,6 +144,7 @@ void Server::start() {
 void Server::hStart(typeSession session, const boost::system::error_code& error) {
     
     if (!error) {
+        fprintf(stdout, "new session connected [%d]\n", m_session_count++);
         session->start();
     }
     start();
@@ -150,7 +160,7 @@ bool initServerContext (int argc, char**argv) {
         boost::asio::io_service mService;
 
         typeServerList mServerList;
-        for  (int i = 1; i < argc; ++i) {
+        for  (int i = 2; i < argc; ++i) {
             tcp::endpoint endpoint(tcp::v4(), atoi(argv[i]));
             typeServer server(new Server(mService, endpoint));
             mServerList.push_back(server);

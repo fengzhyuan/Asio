@@ -10,16 +10,17 @@ Client::Client(io_service& service,
       m_socket(service),
       m_status(true) {
     cout << "input name:" << endl;
-    cin >> m_uid;
+    cin >> m_uid; // TODO: check validity on server
+
     boost::asio::async_connect(m_socket, iter,
         boost::bind(&Client::hConnect, this,
           boost::asio::placeholders::error));
   }
 
 /**
- * \TODO check if timeout during cstr initialization
+ * \TODO check if timeout during ctor initialization
  * // boost::asio::deadline_timer
- * @return return false if cstr failed
+ * @return return false if ctor failed
  */
 bool Client::isConnected() const {
     return m_status;
@@ -44,13 +45,12 @@ void Client::close() {
 void Client::hConnect(const system::error_code& err) {
     if (!err) {
         cout << "connected to server " << endl;
-        // push basic info to server
-        Message mClientInfo(true);
-        string info = m_uid;
-        mClientInfo.bodyLength(info.length());
-        strcpy(mClientInfo.body(), info.c_str());
-        
-        this->write( mClientInfo );
+        fflush(stdout);
+         // push basic info to server
+        Message msg(Message::MSG_INIT);
+        msg.buildMsg(this->m_uid);
+        //mClientInfo.encodeHeader();
+        m_msgs.push_back(msg);
         
         hRead(err);
     }   
@@ -106,13 +106,13 @@ void Client::doWrite(Message msg) {
     bool bEmpty = m_msgs.empty();
     m_msgs.push_back(msg);
     
-    if (bEmpty) {
-      boost::asio::async_write(m_socket,
-          boost::asio::buffer(m_msgs.front().data(),
-            m_msgs.front().length()),
-          boost::bind(&Client::hWrite, this,
-            boost::asio::placeholders::error));
-    }
+//    if (bEmpty) {
+        boost::asio::async_write(m_socket,
+            boost::asio::buffer(m_msgs.front().data(),
+              m_msgs.front().length()),
+            boost::bind(&Client::hWrite, this,
+              boost::asio::placeholders::error));
+//    }
 }
 
 void Client::hWrite(const boost::system::error_code& error) {
@@ -139,9 +139,26 @@ const string Client::getName() const {
     return m_uid;
 }
 void Client::displayMsg() {
+    using namespace Color;
+    Color::Modifier cfont;
+    int msgType = m_msg_in.msgType();
+    switch (msgType) {
+        case Message::MSG_ENTER :
+            cfont = Color::Modifier(Color::FG_GREEN); break;
+        case Message::MSG_LEAVE :
+            cfont = Color::Modifier(Color::FG_RED); break;
+        default:
+            cfont = Color::Modifier(Color::FG_DEFAULT);
+    }
+    Color::Modifier cref, cline = Color::Modifier(Color::FG_BLUE);
     
-    cout.write(m_msg_in.body(), m_msg_in.bodyLength());
-    cout << "\n";
+    char body[Message::MAX_BODY_LENGTH+1]="";
+    memcpy(body, m_msg_in.body(), m_msg_in.bodyLength());
+    if (msgType == Message::MSG_CONT)
+        cout << cline << "----------------------------" << endl;
+    cout << cfont << body << cref << endl;
+    if (msgType == Message::MSG_CONT)
+        cout << cline << "----------------------------" << cref << endl;
 }
 
 /**
@@ -178,14 +195,10 @@ bool initClientContext(int argc, char**argv) {
             }
             
             Message msg;
-            string clientName = pClient->getName();
-            string strMsg(input);
-            strMsg = clientName + ":" + strMsg;
-                        
-            msg.bodyLength(strMsg.length());
+            string strMsg = pClient->getName() + ":" + string(input);
+
+            msg.buildMsg(strMsg);
             
-            memcpy(msg.body(), strMsg.c_str(), msg.bodyLength());
-            msg.encodeHeader();
             pClient->write(msg);
         }
 

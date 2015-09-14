@@ -40,7 +40,7 @@ public:
     void join(typeBSession);/* join a new session */
     void leave(typeBSession);       /* remove a session */
     void deliver(const Message&);   /* deliver message to members */
-    void blackboard( const Message&);
+    void blackboard(const string&, Message::MSG_TYPE);
 
 private:
     enum { MAX_MSG_RECORD = 100 };
@@ -86,9 +86,10 @@ public:
     void hStart(typeSession, const boost::system::error_code&);
 
 private:
-  boost::asio::io_service& m_service;
-  tcp::acceptor m_acceptor;
-  Room m_room;
+    int m_session_count;
+    boost::asio::io_service& m_service;
+    tcp::acceptor m_acceptor;
+    Room m_room;
 };
 
 typedef boost::shared_ptr<Server> typeServer;
