@@ -5,8 +5,8 @@
  * Created on September 11, 2015, 6:06 PM
  */
 
-#include "Client.h"
-#include "Server.h"
+#include "tchat/async_method/include/Client.h"
+#include "tchat/async_method/include/Server.h"
 
 using namespace std;
 /*

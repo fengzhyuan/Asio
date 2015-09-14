@@ -5,8 +5,8 @@
  * Created on September 11, 2015, 6:08 PM
  */
 
-#ifndef UTILS_H
-#define	UTILS_H
+#ifndef ASIO_ASYNC_METHOD_INCLUDE_UTILS_H
+#define	ASIO_ASYNC_METHOD_INCLUDE_UTILS_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,5 +31,5 @@ using namespace boost::asio::ip;
 using boost::asio::ip::tcp;
 
 
-#endif	/* UTILS_H */
+#endif	/* ASIO_ASYNC_METHOD_INCLUDE_UTILS_H */
 

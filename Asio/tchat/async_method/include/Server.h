@@ -5,8 +5,8 @@
  * Created on September 11, 2015, 9:39 PM
  */
 
-#ifndef CHATSERVER_H
-#define	CHATSERVER_H
+#ifndef ASIO_ASYNC_METHOD_INCLUDE_CHATSERVER_H
+#define	ASIO_ASYNC_METHOD_INCLUDE_CHATSERVER_H
 
 #include "utils.h"
 #include "Message.h"
@@ -96,5 +96,5 @@ typedef list<typeServer> typeServerList;
 
 bool initServerContext(int argc, char**argv);
 
-#endif	/* CHATSERVER_H */
+#endif	/* ASIO_ASYNC_METHOD_INCLUDE_CHATSERVER_H */
 
