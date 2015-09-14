@@ -4,7 +4,7 @@ CXXFLAGS = -g -I./Asio/tchat/async_method/include -I/usr/include -I/usr/local/in
 CXXLIBS  = -L/usr/lib -L/usr/local/lib -lboost_thread -lboost_system -lpthread
 
 SOURCE_ALL = Asio/tchat/async_method/src/
-TARGET_ALL = chatsystem
+TARGET_ALL = boostasio
 
 $(TARGET_ALL):	
 	$(CXX) $(SOURCE_ALL)*.cpp  $(CXXFLAGS) $(CXXLIBS) -o  $(TARGET_ALL)
