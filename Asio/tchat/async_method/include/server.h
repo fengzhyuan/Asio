@@ -9,7 +9,7 @@
 #define	ASIO_ASYNC_METHOD_INCLUDE_CHATSERVER_H
 
 #include "utils.h"
-#include "Message.h"
+#include "message.h"
 
 /*!
  * \class BaseMember
