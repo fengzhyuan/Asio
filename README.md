@@ -1,4 +1,4 @@
-Learning multithreaded programming and network programming with Boost - demo  
+Learning multithreaded programming and network programming with Boost   
 
 other docs:
 http://mmoaay.gitbooks.io/boost-asio-cpp-network-programming-chinese/
