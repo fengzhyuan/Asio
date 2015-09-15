@@ -176,10 +176,10 @@ bool initClientContext(int argc, char**argv) {
         
         io_service mService;
 
-        tcp::resolver resolver(mService);
+        tcp::resolver mResolver(mService);
         tcp::resolver::query mQuery(argv[2], argv[3]);
         // domain name: 1-to-many
-        tcp::resolver::iterator mIterator = resolver.resolve(mQuery);
+        tcp::resolver::iterator mIterator = mResolver.resolve(mQuery);
 
         boost::shared_ptr<Client> pClient(new Client(mService, mIterator));
 
