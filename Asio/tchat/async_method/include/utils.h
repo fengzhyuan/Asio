@@ -15,20 +15,23 @@
 #include <deque>
 #include <list>
 #include <string>
+#include <sstream>
+#include <iomanip>
+#include <vector>
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/date_time.hpp>
-#include <boost/lambda/bind.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/base_object.hpp>
+
+
 
 using namespace std;
 using namespace boost;
 using namespace boost::asio;
 using namespace boost::asio::ip;
-using boost::asio::ip::tcp;
 
 namespace Color {
     enum Code {

@@ -19,14 +19,14 @@ class BaseSession {
 public:
     virtual ~BaseSession() {}
     virtual void deliver(const Message& msg) = 0;
-    const string getUid() const{ 
-        return m_uid;
+    const string uid() const{ 
+        return uid_;
     }
 protected:
-    void setUid( const char* name) { m_uid = string(name); }
+    void set_uid( const char* name) { uid_ = string(name); }
     
 protected:
-    string m_uid;
+    string uid_;
 };
 
 /*!
@@ -46,8 +46,8 @@ private:
     enum { MAX_MSG_RECORD = 100 };
 
 private:
-    set<typeBSession> m_member_list;
-    dqMsg      m_msgs; /**< most recent messages in the room */
+    set<typeBSession> session_list_;
+    dqMsg      msg_list_; /**< most recent messages in the room */
 };
 
 
@@ -63,18 +63,18 @@ class Session
  public:
     Session(boost::asio::io_service&, Room&);
 
-    tcp::socket& getSocket();
+    tcp::socket& socket();
     void start();
     void deliver(const Message&);
-    void hParseHeader(const boost::system::error_code&);
-    void hParseBody(const boost::system::error_code&);
-    void hWrite(const boost::system::error_code&);
+    void h_read_head(const boost::system::error_code&);
+    void h_read_body(const boost::system::error_code&);
+    void h_write(const boost::system::error_code&);
     
  private:
-    tcp::socket m_socket;   
-    Room        &m_room;
-    Message     m_msg_in;
-    dqMsg       m_msgs;
+    tcp::socket socket_;   
+    Room        &room_;
+    Message     msg_;
+    dqMsg       msg_list_;
 };
 
 class Server {
@@ -83,19 +83,19 @@ public:
 public:
     Server(boost::asio::io_service&, const tcp::endpoint&);
     void start();
-    void hStart(typeSession, const boost::system::error_code&);
+    void h_start(typeSession, const boost::system::error_code&);
 
 private:
-    int m_session_count;
-    boost::asio::io_service& m_service;
-    tcp::acceptor m_acceptor;
-    Room m_room;
+    int session_count_;
+    boost::asio::io_service& io_service_;
+    tcp::acceptor acceptor_;
+    Room room_;
 };
 
 typedef boost::shared_ptr<Server> typeServer;
 typedef list<typeServer> typeServerList;
 
-bool initServerContext(int argc, char**argv);
+bool InitServerContext(int argc, char**argv);
 
 #endif	/* ASIO_ASYNC_METHOD_INCLUDE_CHATSERVER_H */
 

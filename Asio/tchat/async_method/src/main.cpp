@@ -9,7 +9,7 @@
 #include "include/server.h"
 
 using namespace std;
-/*
+/* 
  * 
  */
 int main(int argc, char** argv) {
@@ -23,11 +23,11 @@ int main(int argc, char** argv) {
     string mType = string(argv[1]);
     
     if (mType == "client") {
-        if (!initClientContext(argc, argv))
+        if (!InitClientContext(argc, argv))
             return -1;
     }
     else if (mType == "server") {
-        if (!initServerContext(argc, argv))
+        if (!InitServerContext(argc, argv))
             return -1;
     }
     

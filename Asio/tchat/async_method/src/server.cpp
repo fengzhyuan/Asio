@@ -5,20 +5,20 @@
 #include "include/server.h"
 
 void Room::join(typeBSession session) {
-    m_member_list.insert(session);
+    session_list_.insert(session);
 
     // send message history in this room to the new session
-    std::for_each(m_msgs.begin(), m_msgs.end(),
+    std::for_each(msg_list_.begin(), msg_list_.end(),
         boost::bind(&BaseSession::deliver, session, _1));
     
     // notification on new member
-    string str = "[ " + session->getUid() + " ] entered";
+    string str = "[ " + session->uid() + " ] entered";
     blackboard(str, Message::MSG_ENTER);
 }
 
 void Room::leave(typeBSession session) {
-    m_member_list.erase(session);
-    string str = "[ " + session->getUid() + " ] leaved";
+    session_list_.erase(session);
+    string str = "[ " + session->uid() + " ] leaved";
     blackboard(str, Message::MSG_LEAVE);
 }
 
@@ -27,98 +27,98 @@ void Room::leave(typeBSession session) {
  * @param msg new message
  */
 void Room::deliver(const Message& msg) {
-    m_msgs.push_back(msg);
-    while (m_msgs.size() > MAX_MSG_RECORD)
-      m_msgs.pop_front();
+    msg_list_.push_back(msg);
+    while (msg_list_.size() > MAX_MSG_RECORD)
+      msg_list_.pop_front();
     
-    for_each(m_member_list.begin(), m_member_list.end(),
-        boost::bind(&BaseSession::deliver, _1, boost::ref(msg))); /* ref to session::m_msg_in */
+    for_each(session_list_.begin(), session_list_.end(),
+        boost::bind(&BaseSession::deliver, _1, boost::ref(msg))); /* ref to session::msg_ */
 }
 
 void Room::blackboard(const string& str, Message::MSG_TYPE msgType) {
     Message msg(msgType);
-    msg.buildMsg(str);
+    msg.build(str);
     this->deliver(msg);
 }
 
 //------------------------------------------------------------------------------
 
 Session::Session(boost::asio::io_service& service, Room& room)
-      : m_socket(service),
-        m_room(room) {}
+      : socket_(service),
+        room_(room) {}
 
-tcp::socket& Session::getSocket() {
-    return m_socket;
+tcp::socket& Session::socket() {
+    return socket_;
 }
 
 void Session::start() {
 
-    boost::asio::async_read(m_socket,
-        boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
-        boost::bind(&Session::hParseHeader, shared_from_this(),
+    boost::asio::async_read(socket_,
+        boost::asio::buffer(msg_.data(), Message::HEADER_LENGTH),
+        boost::bind(&Session::h_read_head, shared_from_this(),
           boost::asio::placeholders::error));
 }
 
 void Session::deliver(const Message& msg) {
-    bool bEmpty = m_msgs.empty();
-    m_msgs.push_back(msg);
+    bool bEmpty = msg_list_.empty();
+    msg_list_.push_back(msg);
 
     if (bEmpty) {
         // send the message to client
-        boost::asio::async_write(m_socket,
-            boost::asio::buffer(m_msgs.front().data(), m_msgs.front().length()),
-            boost::bind(&Session::hWrite, shared_from_this(),
+        boost::asio::async_write(socket_,
+            boost::asio::buffer(msg_list_.front().data(), msg_list_.front().length()),
+            boost::bind(&Session::h_write, shared_from_this(),
               boost::asio::placeholders::error));
     }
 }
 
-void Session::hParseHeader(const boost::system::error_code& error) {
-    if  (!error && m_msg_in.decodeHeader()) {
-        boost::asio::async_read(m_socket,
-            boost::asio::buffer(m_msg_in.body(), m_msg_in.bodyLength()),
-            boost::bind(&Session::hParseBody, shared_from_this(),
+void Session::h_read_head(const boost::system::error_code& error) {
+    if  (!error && msg_.decode_head()) {
+        boost::asio::async_read(socket_,
+            boost::asio::buffer(msg_.body(), msg_.body_length()),
+            boost::bind(&Session::h_read_body, shared_from_this(),
               boost::asio::placeholders::error));
     }
     else {
-        m_room.leave(shared_from_this());
+        room_.leave(shared_from_this());
     }
 }
 
-void Session::hParseBody(const boost::system::error_code& error) {
+void Session::h_read_body(const boost::system::error_code& error) {
     if (!error) {
-        if (!m_msg_in.isSysMsg()) {
-            m_room.deliver(m_msg_in);
+        if (msg_.type() != Message::MSG_INIT) {
+            room_.deliver(msg_);
         }
         else {
             char body[Message::MAX_BODY_LENGTH+1]="";
-            memcpy(body, m_msg_in.body(), m_msg_in.bodyLength());
-            this->setUid(body);  
-            m_room.join(shared_from_this());
+            memcpy(body, msg_.body(), msg_.body_length());
+            this->set_uid(body);  
+            room_.join(shared_from_this());
         }
         // prepare for the next session
-        boost::asio::async_read(m_socket,
-            boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
-            boost::bind(&Session::hParseHeader, shared_from_this(),
+        boost::asio::async_read(socket_,
+            boost::asio::buffer(msg_.data(), Message::HEADER_LENGTH),
+            boost::bind(&Session::h_read_head, shared_from_this(),
               boost::asio::placeholders::error));
     }
     else {
-        m_room.leave(shared_from_this());
+        room_.leave(shared_from_this());
     }
 }
 
-void Session::hWrite(const boost::system::error_code& error) {
+void Session::h_write(const boost::system::error_code& error) {
     if (!error) {
-        m_msgs.pop_front();
-        if (!m_msgs.empty()) {
-        boost::asio::async_write(m_socket,
-            boost::asio::buffer(m_msgs.front().data(),
-              m_msgs.front().length()),
-            boost::bind(&Session::hWrite, shared_from_this(),
+        msg_list_.pop_front();
+        if (!msg_list_.empty()) {
+        boost::asio::async_write(socket_,
+            boost::asio::buffer(msg_list_.front().data(),
+              msg_list_.front().length()),
+            boost::bind(&Session::h_write, shared_from_this(),
               boost::asio::placeholders::error));
         }
     }
     else {
-        m_room.leave(shared_from_this());
+        room_.leave(shared_from_this());
     }
 }
 
@@ -126,31 +126,31 @@ void Session::hWrite(const boost::system::error_code& error) {
 
 Server::Server(boost::asio::io_service& service, 
         const tcp::endpoint& endpoint)
-        : m_session_count(0),
-          m_service(service),
-          m_acceptor(service, endpoint){
+        : session_count_(0),
+          io_service_(service),
+          acceptor_(service, endpoint){
     cout << "server established\n";
     start(); 
 }
 
 void Server::start() {
     // new request from a client
-    typeSession mNewSession(new Session(m_service, m_room));
-    m_acceptor.async_accept(mNewSession->getSocket(),
-        boost::bind(&Server::hStart, this, mNewSession,
+    typeSession mNewSession(new Session(io_service_, room_));
+    acceptor_.async_accept(mNewSession->socket(),
+        boost::bind(&Server::h_start, this, mNewSession,
           boost::asio::placeholders::error));
 }
 
-void Server::hStart(typeSession session, const boost::system::error_code& error) {
+void Server::h_start(typeSession session, const boost::system::error_code& error) {
     
     if (!error) {
-        fprintf(stdout, "new session connected [%d]\n", m_session_count++);
+        fprintf(stdout, "new session connected [%d]\n", session_count_++);
         session->start();
     }
     start();
 }
 
-bool initServerContext (int argc, char**argv) {
+bool InitServerContext (int argc, char**argv) {
     try{
         if (argc < 3) {
             cout << "invalid params: [<port>] | [<port> <port> ...]\n";

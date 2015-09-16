@@ -6,14 +6,15 @@
 
 Client::Client(io_service& service,
                 tcp::resolver::iterator iter)
-    : m_service(service),
-      m_socket(service),
-      m_status(true) {
+        : service_(service),
+          connection_(service),
+          socket_(service),
+          status_(true) {
     cout << "input name:" << endl;
-    cin >> m_uid; // TODO: check validity on server
+    cin >> uid_; // TODO: check validity on server
 
-    boost::asio::async_connect(m_socket, iter,
-        boost::bind(&Client::hConnect, this,
+    boost::asio::async_connect(connection_.socket(), iter,
+        boost::bind(&Client::h_connect, this,
           boost::asio::placeholders::error));
   }
 
@@ -22,8 +23,8 @@ Client::Client(io_service& service,
  * // boost::asio::deadline_timer
  * @return return false if ctor failed
  */
-bool Client::isConnected() const {
-    return m_status;
+bool Client::status() const {
+    return status_;
 }
 
 /**
@@ -31,53 +32,87 @@ bool Client::isConnected() const {
  * @param _msg message to be stored
  */
 void Client::write(const Message& msg) {
-    m_service.post(boost::bind(&Client::doWrite, this, msg));
+    service_.post(boost::bind(&Client::do_write, this, msg));
+}
+
+void Client::swrite(const SeriableMessage& msg) {
+    connection_.service().post(boost::bind(&Client::do_swrite, this, msg));
 }
 
 void Client::close() {
-    m_service.post(boost::bind(&Client::doClose, this));
+    service_.post(boost::bind(&Client::do_close, this));
+}
+
+void Client::sclose() {
+    connection_.service().post(boost::bind(&Client::do_close, this));
 }
 
 /**
  * cstr connection handler
  * @param err
  */
-void Client::hConnect(const system::error_code& err) {
+void Client::h_connect(const system::error_code& err) {
     if (!err) {
         cout << "connected to server " << endl;
         fflush(stdout);
-         // push basic info to server
-        Message msg(Message::MSG_INIT);
-        msg.buildMsg(this->m_uid);
-        //mClientInfo.encodeHeader();
-        m_msgs.push_back(msg);
-        
-        hRead(err);
+        // TODO: add password
+        Message msgInitInfo(Message::MSG_INIT);
+        msgInitInfo.build(this->uid_);
+
+        // send identification info to server
+        boost::asio::async_write(socket_,
+            boost::asio::buffer(msgInitInfo.data(),
+              msgInitInfo.length()),
+            boost::bind(&Client::h_read, this,
+              boost::asio::placeholders::error));
+
     }   
 }
 
-void Client::hRead(const system::error_code& error) {
+void Client::h_sconnect(const system::error_code& error) {
     if (!error) {
-        // exec pParseHeader after read operation
-        async_read(m_socket,
-            buffer(m_msg_in.data(), Message::HEADER_LENGTH),
-            bind(&Client::hParseHeader, this,
+        cout << "connected to server " << endl;
+        fflush(stdout);
+        // TODO: add password
+        SeriableMessage msgInit(Message::MSG_INIT, this->uid_);
+        smsg_.push_back(msgInit);
+        // send identification info to server
+        connection_.async_write(smsg_, 
+            boost::bind(&Client::h_sread, this, 
+            asio::placeholders::error));
+    }
+}
+
+void Client::h_read(const system::error_code& error) {
+    if (!error) {
+        async_read(socket_,
+            buffer(msg_.data(), Message::HEADER_LENGTH),
+            bind(&Client::h_read_header, this,
                 asio::placeholders::error));
     }
 }
+
+void Client::h_sread(const system::error_code& error) {
+    if (!error) {
+        sdisplay();
+        connection_.async_read(smsg_, 
+                boost::bind(&Client::h_sread, this, 
+                    asio::placeholders::error));
+    }
+}
 /**
- * sub-module of HandleParseBody
+ * read all msgs and display them
  * @param error error code (implicitly convert to bool type)
  */
-void Client::hParseHeader(const boost::system::error_code& error) {
-    if (!error && m_msg_in.decodeHeader()) {
-      boost::asio::async_read(m_socket,
-          boost::asio::buffer(m_msg_in.body(), m_msg_in.bodyLength()),
-          boost::bind(&Client::hParseBody, this,
+void Client::h_read_header(const boost::system::error_code& error) {
+    if (!error && msg_.decode_head()) {
+      boost::asio::async_read(socket_,
+          boost::asio::buffer(msg_.body(), msg_.body_length()),
+          boost::bind(&Client::h_read_body, this,
             boost::asio::placeholders::error));
     }
     else {
-        doClose();
+        do_close();
     }
 }
 
@@ -85,16 +120,13 @@ void Client::hParseHeader(const boost::system::error_code& error) {
  * call parse_header hr first
  * @param err
  */
-void Client::hParseBody(const boost::system::error_code& error) {
+void Client::h_read_body(const boost::system::error_code& error) {
     if (!error) {
-        displayMsg();
-        boost::asio::async_read(m_socket,
-            boost::asio::buffer(m_msg_in.data(), Message::HEADER_LENGTH),
-            boost::bind(&Client::hParseHeader, this,
-              boost::asio::placeholders::error));
+        display();
+        h_read(error);
     }
     else {
-        doClose();
+        do_close();
     }
 }
 
@@ -102,46 +134,54 @@ void Client::hParseBody(const boost::system::error_code& error) {
  * write all messages into socket
  * @param err
  */
-void Client::doWrite(Message msg) {
-    bool bEmpty = m_msgs.empty();
-    m_msgs.push_back(msg);
+void Client::do_write(Message msg) {
+    bool bEmpty = msg_list_.empty();
+    msg_list_.push_back(msg);
     
-//    if (bEmpty) {
-        boost::asio::async_write(m_socket,
-            boost::asio::buffer(m_msgs.front().data(),
-              m_msgs.front().length()),
-            boost::bind(&Client::hWrite, this,
+    if (bEmpty) { // each client can only do write operation synchronously
+        boost::asio::async_write(socket_,
+            boost::asio::buffer(msg_list_.front().data(),
+              msg_list_.front().length()),
+            boost::bind(&Client::h_write, this,
               boost::asio::placeholders::error));
+    }
+}
+
+void Client::do_swrite(SeriableMessage msg) {
+//    bool empty = smsg_.empty();
+//    smsg_.push_back(msg);
+//    if (empty) {
+//        connection_.async_write(smsg_, )
 //    }
 }
 
-void Client::hWrite(const boost::system::error_code& error) {
+void Client::h_write(const boost::system::error_code& error) {
     if  (!error) {
-        m_msgs.pop_front();
-        if  (!m_msgs.empty()) {
-            boost::asio::async_write(m_socket,
-                boost::asio::buffer(m_msgs.front().data(),
-                  m_msgs.front().length()),
-                boost::bind(&Client::hWrite, this,
+        msg_list_.pop_front();
+        if  (!msg_list_.empty()) {
+            boost::asio::async_write(socket_,
+                boost::asio::buffer(msg_list_.front().data(),
+                  msg_list_.front().length()),
+                boost::bind(&Client::h_write, this,
                   boost::asio::placeholders::error));
         }
     }
     else {
-        doClose();
+        do_close();
     }
 }
 
-void Client::doClose() {
-    m_socket.close();
+void Client::do_close() {
+    socket_.close();
 }
 
 const string Client::getName() const {
-    return m_uid;
+    return uid_;
 }
-void Client::displayMsg() {
+void Client::display() {
     using namespace Color;
     Color::Modifier cfont;
-    int msgType = m_msg_in.msgType();
+    int msgType = msg_.type();
     switch (msgType) {
         case Message::MSG_ENTER :
             cfont = Color::Modifier(Color::FG_GREEN); break;
@@ -153,7 +193,7 @@ void Client::displayMsg() {
     Color::Modifier cref, cline = Color::Modifier(Color::FG_BLUE);
     
     char body[Message::MAX_BODY_LENGTH+1]="";
-    memcpy(body, m_msg_in.body(), m_msg_in.bodyLength());
+    memcpy(body, msg_.body(), msg_.body_length());
     if (msgType == Message::MSG_CONT)
         cout << cline << "----------------------------" << endl;
     cout << cfont << body << cref << endl;
@@ -167,7 +207,7 @@ void Client::displayMsg() {
  * @param argv main argv 
  * @return [true: cstr established][false: cstr failed]
  */
-bool initClientContext(int argc, char**argv) {
+bool InitClientContext(int argc, char**argv) {
     try{
         if (argc != 4) {
             cout << " invalid param [<host> <port>]\n";
@@ -197,7 +237,7 @@ bool initClientContext(int argc, char**argv) {
             Message msg;
             string strMsg = pClient->getName() + ":" + string(input);
 
-            msg.buildMsg(strMsg);
+            msg.build(strMsg);
             
             pClient->write(msg);
         }
