@@ -9,19 +9,20 @@
 #define ASIO_ASYNC_METHOD_INCLUDE_MESSAGE_H_
 
 #include "utils.h"
+
+enum HEADER_INFO{HEADER_LENGTH = 10, MAX_BODY_LENGTH = 512 };
+enum MSG_TYPE{MSG_INIT=0,MSG_CONT,MSG_ENTER,MSG_LEAVE}; 
 /*!
  * \class Message
  * data description of message used for communication
  */
 class BaseMessage {
-friend class boost::serialization::access; // serializable    
-
 public:
     virtual ~BaseMessage() {}
-
-public:
-    enum {HEADER_LENGTH = 10, MAX_BODY_LENGTH = 512 };
-    enum MSG_TYPE{MSG_INIT=0,MSG_CONT,MSG_ENTER,MSG_LEAVE};    
+    template<class Archive>
+    void serialize(Archive &ar, const size_t version) {}
+    
+friend class boost::serialization::access;    
 };
 
 class Message : public BaseMessage {
@@ -97,28 +98,29 @@ class Message : public BaseMessage {
     int     type_;
 };
 
-class SeriableMessage : BaseMessage {
+class SerializedMessage : public BaseMessage {
+public:
 friend class boost::serialization::access; // serializable
     template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
+    void serialize(Archive & ar, const unsigned int version) {
         // serialize base class information
         ar & boost::serialization::base_object<BaseMessage>(*this);
         ar & data_;
         ar & body_length_;
-        ar & encoded_;
         ar & type_;
     }
     
 public:
-    SeriableMessage() : type_(MSG_CONT) {}
-    SeriableMessage(const string& str) : SeriableMessage(){
+    SerializedMessage() : type_(MSG_CONT) {}
+    SerializedMessage(const string& str) : SerializedMessage(){
         data_ = vector<char>(str.begin(), str.end());
     }  
-    SeriableMessage(int type, const string& str) : type_(type) {
+    SerializedMessage(int type, const string& str) : type_(type) {
         data_ = vector<char>(str.begin(), str.end());
     }
-    
+    const int type() const {
+        return type_;
+    }
     vector<char>& data() {
         return data_;
     }
@@ -128,9 +130,9 @@ public:
 private:
     vector<char> data_;
     size_t  body_length_;
-    bool    encoded_;
     int     type_;
 };
 typedef std::deque<Message> dqMsg;
+typedef std::deque<SerializedMessage> dsSMsg;
 #endif  /* ASIO_ASYNC_METHOD_INCLUDE_MESSAGE_H_ */
 

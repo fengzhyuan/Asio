@@ -14,7 +14,7 @@ Client::Client(io_service& service,
     cin >> uid_; // TODO: check validity on server
 
     boost::asio::async_connect(connection_.socket(), iter,
-        boost::bind(&Client::h_connect, this,
+        boost::bind(&Client::h_sconnect, this,
           boost::asio::placeholders::error));
   }
 
@@ -35,8 +35,8 @@ void Client::write(const Message& msg) {
     service_.post(boost::bind(&Client::do_write, this, msg));
 }
 
-void Client::swrite(const SeriableMessage& msg) {
-    connection_.service().post(boost::bind(&Client::do_swrite, this, msg));
+void Client::swrite(const SerializedMessage& msg) {
+//    connection_.service().post(boost::bind(&Client::do_swrite, this, msg));
 }
 
 void Client::close() {
@@ -56,7 +56,7 @@ void Client::h_connect(const system::error_code& err) {
         cout << "connected to server " << endl;
         fflush(stdout);
         // TODO: add password
-        Message msgInitInfo(Message::MSG_INIT);
+        Message msgInitInfo(MSG_INIT);
         msgInitInfo.build(this->uid_);
 
         // send identification info to server
@@ -74,10 +74,10 @@ void Client::h_sconnect(const system::error_code& error) {
         cout << "connected to server " << endl;
         fflush(stdout);
         // TODO: add password
-        SeriableMessage msgInit(Message::MSG_INIT, this->uid_);
-        smsg_.push_back(msgInit);
+        SerializedMessage msgInit(MSG_INIT, this->uid_);
+        smsg_list_.push_back(msgInit);
         // send identification info to server
-        connection_.async_write(smsg_, 
+        connection_.async_write(smsg_list_, 
             boost::bind(&Client::h_sread, this, 
             asio::placeholders::error));
     }
@@ -86,7 +86,7 @@ void Client::h_sconnect(const system::error_code& error) {
 void Client::h_read(const system::error_code& error) {
     if (!error) {
         async_read(socket_,
-            buffer(msg_.data(), Message::HEADER_LENGTH),
+            buffer(msg_.data(), HEADER_LENGTH),
             bind(&Client::h_read_header, this,
                 asio::placeholders::error));
     }
@@ -95,7 +95,7 @@ void Client::h_read(const system::error_code& error) {
 void Client::h_sread(const system::error_code& error) {
     if (!error) {
         sdisplay();
-        connection_.async_read(smsg_, 
+        connection_.async_read(smsg_list_, 
                 boost::bind(&Client::h_sread, this, 
                     asio::placeholders::error));
     }
@@ -147,12 +147,14 @@ void Client::do_write(Message msg) {
     }
 }
 
-void Client::do_swrite(SeriableMessage msg) {
-//    bool empty = smsg_.empty();
-//    smsg_.push_back(msg);
-//    if (empty) {
-//        connection_.async_write(smsg_, )
-//    }
+void Client::do_swrite(SerializedMessage msg) {
+    bool empty = smsg_list_.empty();
+    smsg_list_.push_back(msg);
+    if (empty) {
+        connection_.async_write(smsg_list_, 
+            boost::bind(&Client::h_swrite, this,
+                boost::asio::placeholders::error));
+    }
 }
 
 void Client::h_write(const boost::system::error_code& error) {
@@ -171,6 +173,15 @@ void Client::h_write(const boost::system::error_code& error) {
     }
 }
 
+void Client::h_swrite(const system::error_code& error) {
+    if (!error) {
+        smsg_list_.pop_front();
+        if (!smsg_list_.empty()) {
+            
+        }
+    }
+}
+
 void Client::do_close() {
     socket_.close();
 }
@@ -179,28 +190,51 @@ const string Client::getName() const {
     return uid_;
 }
 void Client::display() {
-    using namespace Color;
     Color::Modifier cfont;
     int msgType = msg_.type();
     switch (msgType) {
-        case Message::MSG_ENTER :
+        case MSG_ENTER :
             cfont = Color::Modifier(Color::FG_GREEN); break;
-        case Message::MSG_LEAVE :
+        case MSG_LEAVE :
             cfont = Color::Modifier(Color::FG_RED); break;
         default:
             cfont = Color::Modifier(Color::FG_DEFAULT);
     }
     Color::Modifier cref, cline = Color::Modifier(Color::FG_BLUE);
     
-    char body[Message::MAX_BODY_LENGTH+1]="";
+    char body[MAX_BODY_LENGTH+1]="";
     memcpy(body, msg_.body(), msg_.body_length());
-    if (msgType == Message::MSG_CONT)
+    if (msgType == MSG_CONT)
         cout << cline << "----------------------------" << endl;
     cout << cfont << body << cref << endl;
-    if (msgType == Message::MSG_CONT)
+    if (msgType == MSG_CONT)
         cout << cline << "----------------------------" << cref << endl;
 }
 
+void Client::sdisplay() {
+    
+    for (SerializedMessage msg : smsg_list_) {
+        Color::Modifier cfont;
+        int msg_type = msg.type();
+        switch (msg_type) {
+            case MSG_ENTER :
+                cfont = Color::Modifier(Color::FG_GREEN); break;
+            case MSG_LEAVE :
+                cfont = Color::Modifier(Color::FG_RED); break;
+            default:
+                cfont = Color::Modifier(Color::FG_DEFAULT);
+        }
+        Color::Modifier cref, cline = Color::Modifier(Color::FG_BLUE);
+
+        char body[MAX_BODY_LENGTH+1]="";
+        memcpy(body, msg_.body(), msg_.body_length());
+        if (msg_type == MSG_CONT)
+            cout << cline << "----------------------------" << endl;
+        cout << cfont << body << cref << endl;
+        if (msg_type == MSG_CONT)
+            cout << cline << "----------------------------" << cref << endl;
+    }
+}
 /**
  * client context initialization
  * @param argc main argc
@@ -225,8 +259,8 @@ bool InitClientContext(int argc, char**argv) {
 
         boost::thread mThread(boost::bind(&io_service::run, &mService));
 
-        char input[Message::MAX_BODY_LENGTH + 1];
-        while (cin.getline(input, Message::MAX_BODY_LENGTH + 1)) {
+        char input[MAX_BODY_LENGTH + 1];
+        while (cin.getline(input, MAX_BODY_LENGTH + 1)) {
             if (!strcmp(input, "EXIT") ) {
                 break;
             } 

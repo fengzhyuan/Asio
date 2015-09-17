@@ -12,8 +12,9 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/tuple/tuple.hpp>
-
-
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/deque.hpp>
+#include <boost/serialization/split_free.hpp>
 
 class Connection{
 public:
@@ -32,15 +33,15 @@ public:
     void async_write(const T& t, Handler handler) {
         // Serialize the data first so we know how large it is.
         std::ostringstream archive_stream;
-        boost::archive::text_oarchive archive(archive_stream);
-        archive << t;
+        boost::archive::text_oarchive m_archive(archive_stream);
+        m_archive << t;
         outbound_data_ = archive_stream.str();
 
         // Format the header.
         std::ostringstream header_stream;
-        header_stream << std::setw(Message::HEADER_LENGTH)
+        header_stream << std::setw(HEADER_LENGTH)
           << std::hex << outbound_data_.size();
-        if (!header_stream || header_stream.str().size() != Message::HEADER_LENGTH) {
+        if (!header_stream || header_stream.str().size() != HEADER_LENGTH) {
             // Something went wrong, inform the caller.
             boost::system::error_code error(boost::asio::error::invalid_argument);
             socket_.get_io_service().post(boost::bind(handler, error));
@@ -80,7 +81,7 @@ public:
         }
         else {
           // Determine the length of the serialized data.
-          std::istringstream is(std::string(inbound_header_, Message::HEADER_LENGTH));
+          std::istringstream is(std::string(inbound_header_, HEADER_LENGTH));
           std::size_t inbound_data_size = 0;
           if (!(is >> std::hex >> inbound_data_size)) {
               // Header doesn't seem to be valid. Inform the caller.
@@ -135,7 +136,7 @@ private:
     /// Holds the outbound data.
     string outbound_data_;
     /// Holds an inbound header.
-    char inbound_header_[Message::HEADER_LENGTH];
+    char inbound_header_[HEADER_LENGTH];
     /// Holds the inbound data.
     vector<char> inbound_data_;
 };

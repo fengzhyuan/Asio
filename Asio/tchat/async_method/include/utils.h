@@ -17,7 +17,6 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
-#include <vector>
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>

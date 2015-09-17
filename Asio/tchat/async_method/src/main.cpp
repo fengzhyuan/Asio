@@ -12,6 +12,7 @@ using namespace std;
 /* 
  * 
  */
+
 int main(int argc, char** argv) {
     
     setvbuf(stdout, 0, _IONBF, 0);
@@ -20,13 +21,13 @@ int main(int argc, char** argv) {
         cout << "too few params\n";
         return -1;
     }
-    string mType = string(argv[1]);
+    string m_type = string(argv[1]);
     
-    if (mType == "client") {
+    if (m_type == "client") {
         if (!InitClientContext(argc, argv))
             return -1;
     }
-    else if (mType == "server") {
+    else if (m_type == "server") {
         if (!InitServerContext(argc, argv))
             return -1;
     }

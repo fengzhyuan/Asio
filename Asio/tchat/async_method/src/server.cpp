@@ -13,13 +13,13 @@ void Room::join(typeBSession session) {
     
     // notification on new member
     string str = "[ " + session->uid() + " ] entered";
-    blackboard(str, Message::MSG_ENTER);
+    blackboard(str, MSG_ENTER);
 }
 
 void Room::leave(typeBSession session) {
     session_list_.erase(session);
     string str = "[ " + session->uid() + " ] leaved";
-    blackboard(str, Message::MSG_LEAVE);
+    blackboard(str, MSG_LEAVE);
 }
 
 /**
@@ -35,7 +35,7 @@ void Room::deliver(const Message& msg) {
         boost::bind(&BaseSession::deliver, _1, boost::ref(msg))); /* ref to session::msg_ */
 }
 
-void Room::blackboard(const string& str, Message::MSG_TYPE msgType) {
+void Room::blackboard(const string& str, MSG_TYPE msgType) {
     Message msg(msgType);
     msg.build(str);
     this->deliver(msg);
@@ -54,7 +54,7 @@ tcp::socket& Session::socket() {
 void Session::start() {
 
     boost::asio::async_read(socket_,
-        boost::asio::buffer(msg_.data(), Message::HEADER_LENGTH),
+        boost::asio::buffer(msg_.data(), HEADER_LENGTH),
         boost::bind(&Session::h_read_head, shared_from_this(),
           boost::asio::placeholders::error));
 }
@@ -86,18 +86,18 @@ void Session::h_read_head(const boost::system::error_code& error) {
 
 void Session::h_read_body(const boost::system::error_code& error) {
     if (!error) {
-        if (msg_.type() != Message::MSG_INIT) {
+        if (msg_.type() != MSG_INIT) {
             room_.deliver(msg_);
         }
         else {
-            char body[Message::MAX_BODY_LENGTH+1]="";
+            char body[MAX_BODY_LENGTH+1]="";
             memcpy(body, msg_.body(), msg_.body_length());
             this->set_uid(body);  
             room_.join(shared_from_this());
         }
         // prepare for the next session
         boost::asio::async_read(socket_,
-            boost::asio::buffer(msg_.data(), Message::HEADER_LENGTH),
+            boost::asio::buffer(msg_.data(), HEADER_LENGTH),
             boost::bind(&Session::h_read_head, shared_from_this(),
               boost::asio::placeholders::error));
     }

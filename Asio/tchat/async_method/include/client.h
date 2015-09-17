@@ -16,7 +16,7 @@ class Client{
     Client(io_service& _service, tcp::resolver::iterator _it);
     bool status() const;
     void write(const Message&);
-    void swrite(const SeriableMessage&);
+    void swrite(const SerializedMessage&);
     void close();
     void sclose();
     const string getName() const;
@@ -28,8 +28,9 @@ class Client{
     void h_read_header(const system::error_code&);
     void h_read_body(const system::error_code&);
     void do_write(Message msg);
-    void do_swrite(SeriableMessage msg);
+    void do_swrite(SerializedMessage msg);
     void h_write(const system::error_code&);
+    void h_swrite(const system::error_code&);
     void do_close();
     void display();
     void sdisplay();
@@ -39,7 +40,7 @@ class Client{
     tcp::socket     socket_;
     Connection      connection_; 
     Message         msg_;
-    vector<SeriableMessage> smsg_;      /**< read message */
+    dsSMsg          smsg_list_;      /**< read message */
     dqMsg           msg_list_; /**< stored messages */
     bool            status_;   /**< cstr indicator */
     string          uid_; 

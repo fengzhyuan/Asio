@@ -40,7 +40,7 @@ public:
     void join(typeBSession);/* join a new session */
     void leave(typeBSession);       /* remove a session */
     void deliver(const Message&);   /* deliver message to members */
-    void blackboard(const string&, Message::MSG_TYPE);
+    void blackboard(const string&, MSG_TYPE);
 
 private:
     enum { MAX_MSG_RECORD = 100 };
