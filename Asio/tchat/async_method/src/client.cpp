@@ -7,14 +7,17 @@
 Client::Client(io_service& service,
                 tcp::resolver::iterator iter)
         : service_(service),
-          connection_(service),
+          connection_(new Connection(service)),
           socket_(service),
           status_(true) {
     cout << "input name:" << endl;
     cin >> uid_; // TODO: check validity on server
 
-    boost::asio::async_connect(connection_.socket(), iter,
-        boost::bind(&Client::h_sconnect, this,
+//    boost::asio::async_connect(connection_->socket(), iter,
+//        boost::bind(&Client::h_sconnect, this,
+//          boost::asio::placeholders::error));
+        boost::asio::async_connect(socket_, iter,
+        boost::bind(&Client::h_connect, this,
           boost::asio::placeholders::error));
   }
 
@@ -36,7 +39,7 @@ void Client::write(const Message& msg) {
 }
 
 void Client::swrite(const SerializedMessage& msg) {
-//    connection_.service().post(boost::bind(&Client::do_swrite, this, msg));
+//    connection_->service().post(boost::bind(&Client::do_swrite, this, msg));
 }
 
 void Client::close() {
@@ -44,7 +47,7 @@ void Client::close() {
 }
 
 void Client::sclose() {
-    connection_.service().post(boost::bind(&Client::do_close, this));
+    connection_->service().post(boost::bind(&Client::do_close, this));
 }
 
 /**
@@ -65,7 +68,6 @@ void Client::h_connect(const system::error_code& err) {
               msgInitInfo.length()),
             boost::bind(&Client::h_read, this,
               boost::asio::placeholders::error));
-
     }   
 }
 
@@ -77,7 +79,7 @@ void Client::h_sconnect(const system::error_code& error) {
         SerializedMessage msgInit(MSG_INIT, this->uid_);
         smsg_list_.push_back(msgInit);
         // send identification info to server
-        connection_.async_write(smsg_list_, 
+        connection_->async_write(smsg_list_, 
             boost::bind(&Client::h_sread, this, 
             asio::placeholders::error));
     }
@@ -95,7 +97,7 @@ void Client::h_read(const system::error_code& error) {
 void Client::h_sread(const system::error_code& error) {
     if (!error) {
         sdisplay();
-        connection_.async_read(smsg_list_, 
+        connection_->async_read(smsg_list_, 
                 boost::bind(&Client::h_sread, this, 
                     asio::placeholders::error));
     }
@@ -151,7 +153,7 @@ void Client::do_swrite(SerializedMessage msg) {
     bool empty = smsg_list_.empty();
     smsg_list_.push_back(msg);
     if (empty) {
-        connection_.async_write(smsg_list_, 
+        connection_->async_write(smsg_list_, 
             boost::bind(&Client::h_swrite, this,
                 boost::asio::placeholders::error));
     }
@@ -175,10 +177,8 @@ void Client::h_write(const boost::system::error_code& error) {
 
 void Client::h_swrite(const system::error_code& error) {
     if (!error) {
-        smsg_list_.pop_front();
-        if (!smsg_list_.empty()) {
-            
-        }
+        connection_->async_write(smsg_list_, 
+            boost::bind(&Client::h_swrite, this, asio::placeholders::error));
     }
 }
 
@@ -186,7 +186,7 @@ void Client::do_close() {
     socket_.close();
 }
 
-const string Client::getName() const {
+const string Client::get_name() const {
     return uid_;
 }
 void Client::display() {
@@ -269,10 +269,8 @@ bool InitClientContext(int argc, char**argv) {
             }
             
             Message msg;
-            string strMsg = pClient->getName() + ":" + string(input);
-
+            string strMsg = pClient->get_name() + ":" + string(input);
             msg.build(strMsg);
-            
             pClient->write(msg);
         }
 

@@ -133,6 +133,6 @@ private:
     int     type_;
 };
 typedef std::deque<Message> dqMsg;
-typedef std::deque<SerializedMessage> dsSMsg;
+typedef std::deque<SerializedMessage> dqSMsg;
 #endif  /* ASIO_ASYNC_METHOD_INCLUDE_MESSAGE_H_ */
 

@@ -19,7 +19,7 @@ class Client{
     void swrite(const SerializedMessage&);
     void close();
     void sclose();
-    const string getName() const;
+    const string get_name() const;
  private:
     void h_connect(const system::error_code&);
     void h_sconnect(const system::error_code&);
@@ -38,9 +38,9 @@ class Client{
  private:
     asio::io_service &service_; 
     tcp::socket     socket_;
-    Connection      connection_; 
+    connection_ptr  connection_; 
     Message         msg_;
-    dsSMsg          smsg_list_;      /**< read message */
+    dqSMsg          smsg_list_;      /**< read message */
     dqMsg           msg_list_; /**< stored messages */
     bool            status_;   /**< cstr indicator */
     string          uid_; 

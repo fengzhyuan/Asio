@@ -10,7 +10,7 @@
 
 #include "utils.h"
 #include "message.h"
-
+#include "connection.h"
 /*!
  * \class BaseMember
  * base class of members in chat room
@@ -72,9 +72,11 @@ class Session
     
  private:
     tcp::socket socket_;   
+    connection_ptr connection_;
     Room        &room_;
     Message     msg_;
     dqMsg       msg_list_;
+    dqSMsg      smsg_list_;
 };
 
 class Server {
@@ -83,7 +85,9 @@ public:
 public:
     Server(boost::asio::io_service&, const tcp::endpoint&);
     void start();
+    void sstart();
     void h_start(typeSession, const boost::system::error_code&);
+    void h_sstart(connection_ptr, const boost::system::error_code&);
 
 private:
     int session_count_;

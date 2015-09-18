@@ -3,6 +3,7 @@
  */
 
 #include "include/server.h"
+#include "include/connection.h"
 
 void Room::join(typeBSession session) {
     session_list_.insert(session);
@@ -59,19 +60,6 @@ void Session::start() {
           boost::asio::placeholders::error));
 }
 
-void Session::deliver(const Message& msg) {
-    bool bEmpty = msg_list_.empty();
-    msg_list_.push_back(msg);
-
-    if (bEmpty) {
-        // send the message to client
-        boost::asio::async_write(socket_,
-            boost::asio::buffer(msg_list_.front().data(), msg_list_.front().length()),
-            boost::bind(&Session::h_write, shared_from_this(),
-              boost::asio::placeholders::error));
-    }
-}
-
 void Session::h_read_head(const boost::system::error_code& error) {
     if  (!error && msg_.decode_head()) {
         boost::asio::async_read(socket_,
@@ -106,6 +94,20 @@ void Session::h_read_body(const boost::system::error_code& error) {
     }
 }
 
+
+void Session::deliver(const Message& msg) {
+    bool bEmpty = msg_list_.empty();
+    msg_list_.push_back(msg);
+
+    if (bEmpty) {
+        // send the message to client
+        boost::asio::async_write(socket_,
+            boost::asio::buffer(msg_list_.front().data(), msg_list_.front().length()),
+            boost::bind(&Session::h_write, shared_from_this(),
+              boost::asio::placeholders::error));
+    }
+}
+
 void Session::h_write(const boost::system::error_code& error) {
     if (!error) {
         msg_list_.pop_front();
@@ -135,21 +137,33 @@ Server::Server(boost::asio::io_service& service,
 
 void Server::start() {
     // new request from a client
-    typeSession mNewSession(new Session(io_service_, room_));
-    acceptor_.async_accept(mNewSession->socket(),
-        boost::bind(&Server::h_start, this, mNewSession,
+    typeSession new_session(new Session(io_service_, room_));
+    acceptor_.async_accept(new_session->socket(),
+        boost::bind(&Server::h_start, this, new_session,
           boost::asio::placeholders::error));
 }
 
+void Server::sstart() {
+    connection_ptr new_conn(new Connection(acceptor_.get_io_service()));
+    acceptor_.async_accept(new_conn->socket(),
+            boost::bind(&Server::h_sstart, this, new_conn,
+            boost::asio::placeholders::error));
+}
+
 void Server::h_start(typeSession session, const boost::system::error_code& error) {
-    
     if (!error) {
-        fprintf(stdout, "new session connected [%d]\n", session_count_++);
+        fprintf(stdout, "new session started [%d]\n", session_count_++);
         session->start();
     }
     start();
 }
 
+void Server::h_sstart(connection_ptr conn, const boost::system::error_code& error) {
+    if (!error) {
+        fprintf(stdout, "new connection established [%d]\n", session_count_++);
+        
+    }
+}
 bool InitServerContext (int argc, char**argv) {
     try{
         if (argc < 3) {

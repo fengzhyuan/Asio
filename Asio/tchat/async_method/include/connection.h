@@ -140,6 +140,7 @@ private:
     /// Holds the inbound data.
     vector<char> inbound_data_;
 };
+typedef boost::shared_ptr<Connection> connection_ptr;
 
 #endif	/* ASIO_ASYNC_METHOD_INCLUDE_CONNECTION_H_ */
 
