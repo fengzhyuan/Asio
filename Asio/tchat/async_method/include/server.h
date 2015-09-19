@@ -18,7 +18,7 @@
 class BaseSession {
 public:
     virtual ~BaseSession() {}
-    virtual void deliver(const Message& msg) = 0;
+    virtual void deliver(msg_ptr) = 0;
     const string uid() const{ 
         return uid_;
     }
@@ -39,15 +39,15 @@ public:
 public:
     void join(typeBSession);/* join a new session */
     void leave(typeBSession);       /* remove a session */
-    void deliver(const Message&);   /* deliver message to members */
-    void blackboard(const string&, MSG_TYPE);
+    void deliver(msg_ptr);   /* deliver message to members */
+    void blackboard(const string&, MSG_CONTENT_TYPE);
 
 private:
     enum { MAX_MSG_RECORD = 100 };
 
 private:
     set<typeBSession> session_list_;
-    dqMsg      msg_list_; /**< most recent messages in the room */
+    dq_msg      msg_list_; /**< most recent messages in the room */
 };
 
 
@@ -65,7 +65,7 @@ class Session
 
     tcp::socket& socket();
     void start();
-    void deliver(const Message&);
+    void deliver(msg_ptr);
     void h_read_head(const boost::system::error_code&);
     void h_read_body(const boost::system::error_code&);
     void h_write(const boost::system::error_code&);
@@ -74,9 +74,8 @@ class Session
     tcp::socket socket_;   
     connection_ptr connection_;
     Room        &room_;
-    Message     msg_;
-    dqMsg       msg_list_;
-    dqSMsg      smsg_list_;
+    msg_ptr     msg_;
+    dq_msg      msg_list_;
 };
 
 class Server {
@@ -85,9 +84,7 @@ public:
 public:
     Server(boost::asio::io_service&, const tcp::endpoint&);
     void start();
-    void sstart();
     void h_start(typeSession, const boost::system::error_code&);
-    void h_sstart(connection_ptr, const boost::system::error_code&);
 
 private:
     int session_count_;

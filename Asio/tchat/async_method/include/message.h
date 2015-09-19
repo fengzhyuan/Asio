@@ -11,70 +11,93 @@
 #include "utils.h"
 
 enum HEADER_INFO{HEADER_LENGTH = 10, MAX_BODY_LENGTH = 512 };
-enum MSG_TYPE{MSG_INIT=0,MSG_CONT,MSG_ENTER,MSG_LEAVE}; 
+enum MSG_CONTENT_TYPE{MSG_INIT=0,MSG_CONT,MSG_ENTER,MSG_LEAVE}; 
+enum MSG_STREAM_TYPE{MSG_NS=MSG_LEAVE+1, MSG_S};
 /*!
  * \class Message
  * data description of message used for communication
  */
 class BaseMessage {
+friend class boost::serialization::access;        
 public:
+    BaseMessage() {}
+    BaseMessage(MSG_STREAM_TYPE iotype, MSG_CONTENT_TYPE type)
+    : iotype_(iotype), type_(type) {}
+    
     virtual ~BaseMessage() {}
+    
+    MSG_CONTENT_TYPE type() const {
+        return type_;
+    }
+    MSG_STREAM_TYPE iotype() const {
+        return iotype_;
+    }
+    virtual void build(const string &str) {}
+    
+    virtual const char* data() const {return NULL;}
+    virtual char* data() {return NULL;}
+    virtual const char* body() const {return NULL;}
+    virtual char* body() {return NULL;}
+    
+    virtual size_t length() const {return 0;}
+    virtual size_t body_length() const {return 0;}
+    virtual void body_length(size_t) {}
+    virtual void encode_head() {}
+    virtual bool decode_head() {return false;}
+    
     template<class Archive>
     void serialize(Archive &ar, const size_t version) {}
-    
-friend class boost::serialization::access;    
+protected:
+    MSG_CONTENT_TYPE type_;
+    MSG_STREAM_TYPE  iotype_;
 };
 
 class Message : public BaseMessage {
  public:
-    Message() : body_length_(0), type_(MSG_CONT), encoded_(false) {
+    Message() : BaseMessage(MSG_NS, MSG_CONT), body_length_(0) {
         memset(data_, 0, sizeof(data_));
     }
-    Message(int type) : Message(){
-        type_ = type;
+    Message(MSG_CONTENT_TYPE type) : BaseMessage(MSG_NS, type){
         memset(data_, 0, sizeof(data_));
     }  
 
-    const char* data() const {
+    virtual const char* data() const {
         return data_;
     }
     
-    void build(const string &str) {
+    virtual void build(const string &str) {
         body_length(str.length());
         memcpy(body(), str.c_str(), body_length());
         encode_head();
     }
-    char* data() {
+    virtual char* data() {
         return data_;
     }
 
-    size_t length() const {
+    virtual size_t length() const {
         return HEADER_LENGTH + body_length_;
     }
 
-    const char* body() const {
+    virtual const char* body() const {
         return data_ + HEADER_LENGTH;
     }
 
-    char* body() {
+    virtual char* body() {
         return data_ + HEADER_LENGTH;
     }
 
-    size_t body_length() const {
+    virtual size_t body_length() const {
         return body_length_;
     }
 
-    void body_length(size_t nlen) {
+    virtual void body_length(size_t nlen) {
         body_length_ = (nlen > MAX_BODY_LENGTH ? MAX_BODY_LENGTH : nlen);
     }
 
-    const int type() const {
-        return type_;
-    }
     /** parse body length and message type
      * 
      */
-    bool decode_head() {
+    virtual bool decode_head() {
         sscanf(data_, "%d %d", &body_length_, &type_);
         
         if (body_length_ > MAX_BODY_LENGTH) {
@@ -84,55 +107,18 @@ class Message : public BaseMessage {
         return true;
     }
 
-    void encode_head() {
+    virtual void encode_head() {
         char  header[HEADER_LENGTH + 1] = "";
         sprintf(header, "%d %d", body_length_, type_);
         memcpy(data_,  header, HEADER_LENGTH);
-        encoded_ = true;
     }
 
  private:
     char    data_[HEADER_LENGTH + MAX_BODY_LENGTH];
     size_t  body_length_;
-    bool    encoded_;
-    int     type_;
 };
 
-class SerializedMessage : public BaseMessage {
-public:
-friend class boost::serialization::access; // serializable
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version) {
-        // serialize base class information
-        ar & boost::serialization::base_object<BaseMessage>(*this);
-        ar & data_;
-        ar & body_length_;
-        ar & type_;
-    }
-    
-public:
-    SerializedMessage() : type_(MSG_CONT) {}
-    SerializedMessage(const string& str) : SerializedMessage(){
-        data_ = vector<char>(str.begin(), str.end());
-    }  
-    SerializedMessage(int type, const string& str) : type_(type) {
-        data_ = vector<char>(str.begin(), str.end());
-    }
-    const int type() const {
-        return type_;
-    }
-    vector<char>& data() {
-        return data_;
-    }
-    const vector<char>& data() const {
-        return data_;
-    }
-private:
-    vector<char> data_;
-    size_t  body_length_;
-    int     type_;
-};
-typedef std::deque<Message> dqMsg;
-typedef std::deque<SerializedMessage> dqSMsg;
+typedef boost::shared_ptr<BaseMessage> msg_ptr;
+typedef std::deque<msg_ptr> dq_msg;
 #endif  /* ASIO_ASYNC_METHOD_INCLUDE_MESSAGE_H_ */
 

@@ -15,33 +15,25 @@ class Client{
  public:
     Client(io_service& _service, tcp::resolver::iterator _it);
     bool status() const;
-    void write(const Message&);
-    void swrite(const SerializedMessage&);
+    void write(msg_ptr);
     void close();
-    void sclose();
     const string get_name() const;
  private:
     void h_connect(const system::error_code&);
-    void h_sconnect(const system::error_code&);
     void h_read(const system::error_code&);
-    void h_sread(const system::error_code&);
     void h_read_header(const system::error_code&);
     void h_read_body(const system::error_code&);
-    void do_write(Message msg);
-    void do_swrite(SerializedMessage msg);
+    void do_write(msg_ptr);
     void h_write(const system::error_code&);
-    void h_swrite(const system::error_code&);
     void do_close();
     void display();
-    void sdisplay();
     
  private:
     asio::io_service &service_; 
     tcp::socket     socket_;
     connection_ptr  connection_; 
-    Message         msg_;
-    dqSMsg          smsg_list_;      /**< read message */
-    dqMsg           msg_list_; /**< stored messages */
+    msg_ptr         msg_;
+    dq_msg          msg_list_; /**< stored messages */
     bool            status_;   /**< cstr indicator */
     string          uid_; 
 };
